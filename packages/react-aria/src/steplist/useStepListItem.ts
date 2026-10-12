@@ -11,10 +11,11 @@
  */
 
 import {AriaLinkOptions} from 'react-aria/useLink';
+import {DOMProps, Key, RefObject} from '@react-types/shared';
 import {HTMLAttributes} from 'react';
-import {Key, RefObject} from '@react-types/shared';
 import {SelectableItemStates} from '../selection/useSelectableItem';
 import {StepListState} from 'react-stately/private/steplist/useStepListState';
+import {useId} from '../utils/useId';
 import {useSelectableItem} from '../selection/useSelectableItem';
 
 export interface AriaStepListItemProps {
@@ -22,14 +23,12 @@ export interface AriaStepListItemProps {
 }
 
 export interface StepListItemAria extends SelectableItemStates {
-  /** Props for the step link element. */
+  /** Props for the step element. */
   stepProps: HTMLAttributes<HTMLElement>;
-  /** Props for the visually hidden element indicating the step state. */
-  stepStateProps?: HTMLAttributes<HTMLElement>;
-  /** Text content for the visually hidden message indicating the status of the step state. */
-  stepStateText?: String;
+  /** Props for the hidden element containing the step state text. */
+  stepStateProps: HTMLAttributes<HTMLElement>;
   /** Props for the step link element. */
-  linkProps: AriaLinkOptions;
+  linkProps: AriaLinkOptions & DOMProps;
 }
 
 export function useStepListItem<T>(
@@ -49,15 +48,27 @@ export function useStepListItem<T>(
     selectionManager: manager
   });
 
+  // The step state text lives in a hidden element outside the link so it isn't announced as
+  // part of the list item. Labelling the link with the state element followed by the link
+  // itself prepends the state to the link's content when computing its accessible name.
+  let linkId = useId();
+  let stateId = useId();
+
   return {
     stepProps: {
       ...itemProps,
       role: 'listitem',
       tabIndex: undefined
     },
+    stepStateProps: {
+      id: stateId,
+      hidden: true
+    },
     linkProps: {
+      id: linkId,
       isDisabled,
-      'aria-current': states.isSelected ? 'step' : undefined
+      'aria-current': states.isSelected ? 'step' : undefined,
+      'aria-labelledby': `${stateId} ${linkId}`
     },
     ...states
   };

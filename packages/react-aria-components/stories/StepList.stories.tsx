@@ -22,12 +22,10 @@ import {
 } from 'lucide-react';
 import {Link} from '../src/Link';
 import {Meta, StoryObj} from '@storybook/react';
-import React, {useCallback, useMemo, useState} from 'react';
-import {Router, Link as RouterLink} from '../../dev/s2-docs/pages/react-aria/Router';
+import React, {ReactNode, useCallback, useMemo, useState} from 'react';
 import {RouterProvider} from 'react-aria/private/utils/openLink';
-import {Step, StepListTabList, StepListTabs, StepPanel, StepPanels} from '../src/StepListTabs';
 import {StepList, StepListItem} from '../src/StepList';
-import styles from './styles.css';
+import './StepList.global.css';
 import {Text} from '../src/Text';
 
 export default {
@@ -71,13 +69,19 @@ export const StepListExample: StepListStory = {
   render: (args: any) => (
     <StepList {...args}>
       <StepListItem>
-        <Text>Home</Text>
+        <Link>
+          <Text>Home</Text>
+        </Link>
       </StepListItem>
       <StepListItem>
-        <Text>React Aria</Text>
+        <Link>
+          <Text>React Aria</Text>
+        </Link>
       </StepListItem>
       <StepListItem>
-        <Text>StepList</Text>
+        <Link>
+          <Text>StepList</Text>
+        </Link>
       </StepListItem>
     </StepList>
   )
@@ -126,7 +130,9 @@ export const DynamicStepListExample: StepListStory = {
     <InteractiveStepList {...args} items={items}>
       {(item: ItemValue) => (
         <StepListItem id={item.id}>
-          <Text>{item.id}</Text>
+          <Link>
+            <Text>{item.id}</Text>
+          </Link>
         </StepListItem>
       )}
     </InteractiveStepList>
@@ -161,6 +167,19 @@ function routeToId(route: string): string {
   return coworkerItems.find(item => item.url === route)?.id ?? coworkerItems[0].id;
 }
 
+// A stand-in for a client side router. RouterProvider lets every RAC Link in the tree
+// navigate through it, so the links render as real anchors with an href.
+function Router(props: {
+  children: ({selectedRoute}: {selectedRoute: string}) => ReactNode;
+  defaultSelectedRoute: string;
+}) {
+  let [selectedRoute, setSelectedRoute] = useState<string>(props.defaultSelectedRoute);
+
+  return (
+    <RouterProvider navigate={setSelectedRoute}>{props.children({selectedRoute})}</RouterProvider>
+  );
+}
+
 export const CoworkerStepListExample: StepListStory = {
   render: (args: any) => (
     <Router defaultSelectedRoute="/governance">
@@ -171,56 +190,44 @@ export const CoworkerStepListExample: StepListStory = {
         let nextItem = coworkerItems[Math.min(currentIndex + 1, coworkerItems.length - 1)];
         return (
           <div style={{display: 'flex', flexDirection: 'column', gap: '8px'}}>
-            <div className={styles['coworker-StepList-wrapper']}>
-              <StepList
-                {...args}
-                items={coworkerItems}
-                selectedKey={routeToId(selectedRoute)}
-                className={styles['coworker-StepList']}>
-                {(item: CoworkerItemValue) => {
-                  let Icon = item.Icon;
-                  return (
-                    <StepListItem
-                      id={item.id}
-                      className={styles['coworker-StepListItem']}
-                      href={item.url}>
-                      <Link
-                        className={styles['coworker-StepListItem-link']}
-                        render={props => <RouterLink {...props} />}>
-                        <span className={styles['coworker-StepListItem-marker']} aria-hidden="true">
-                          <span className={styles['coworker-StepListItem-icon']}>
-                            <Icon size={16} strokeWidth={2} />
-                          </span>
-                          <span className={styles['coworker-StepListItem-check']}>
-                            <Check size={16} strokeWidth={3} />
-                          </span>
+            <StepList
+              {...args}
+              items={coworkerItems}
+              selectedKey={routeToId(selectedRoute)}
+              className="react-aria-StepList coworker-StepList">
+              {(item: CoworkerItemValue) => {
+                let Icon = item.Icon;
+                return (
+                  <StepListItem id={item.id} href={item.url}>
+                    <Link>
+                      <span className="coworker-StepListItem-marker" aria-hidden="true">
+                        <span className="coworker-StepListItem-icon">
+                          <Icon size={16} strokeWidth={2} />
                         </span>
-                        <span className={styles['coworker-StepListItem-labels']}>
-                          <Text className={styles['coworker-StepListItem-title']}>
-                            {item.title}
-                          </Text>
-                          <span
-                            className={
-                              styles['coworker-StepListItem-stage']
-                            }>{`Stage ${item.stage}`}</span>
+                        <span className="coworker-StepListItem-check">
+                          <Check size={16} strokeWidth={3} />
                         </span>
-                      </Link>
-                    </StepListItem>
-                  );
-                }}
-              </StepList>
-            </div>
+                      </span>
+                      <span className="coworker-StepListItem-labels">
+                        <Text className="coworker-StepListItem-title">{item.title}</Text>
+                        <span className="coworker-StepListItem-stage">{`Stage ${item.stage}`}</span>
+                      </span>
+                    </Link>
+                  </StepListItem>
+                );
+              }}
+            </StepList>
             {/* Content area driven by the current route: its contents change as the selected step changes. */}
-            <div className={styles['coworker-StepList-panel']}>
-              <h3 className={styles['coworker-StepList-panel-title']}>{currentItem.title}</h3>
-              <p className={styles['coworker-StepList-panel-body']}>
+            <div className="coworker-StepList-panel">
+              <h3 className="coworker-StepList-panel-title">{currentItem.title}</h3>
+              <p className="coworker-StepList-panel-body">
                 {`Stage ${currentItem.stage} of ${coworkerItems.length}. This content updates based on the current route (${selectedRoute}).`}
               </p>
             </div>
             {/* Upcoming steps aren't selectable via click, so provide a different mechanism to progress. */}
             <div style={{display: 'flex', gap: '12px'}}>
-              <RouterLink href={prevItem.url}>Prev</RouterLink>
-              <RouterLink href={nextItem.url}>Next</RouterLink>
+              <Link href={prevItem.url}>Prev</Link>
+              <Link href={nextItem.url}>Next</Link>
             </div>
           </div>
         );
@@ -231,170 +238,4 @@ export const CoworkerStepListExample: StepListStory = {
     description:
       'A StepList component for navigating through steps, based on NavigationTree with links. Follows https://www.w3.org/WAI/tutorials/forms/multi-page/#using-step-by-step-indicator mostly.'
   }
-};
-
-interface TabStepItem {
-  id: string;
-  title: string;
-  stage: number;
-  Icon: LucideIcon;
-}
-
-let tabStepItems: Array<TabStepItem> = [
-  {id: 'plan', title: 'Plan', stage: 1, Icon: ClipboardList},
-  {id: 'build', title: 'Build', stage: 2, Icon: Hammer},
-  {id: 'governance', title: 'Governance review', stage: 3, Icon: GitCompareArrows},
-  {id: 'launch', title: 'Launch', stage: 4, Icon: ShieldCheck},
-  {id: 'monitor', title: 'Monitor', stage: 5, Icon: Rocket}
-];
-
-function TabStepContent({item}: {item: TabStepItem}) {
-  let Icon = item.Icon;
-  return (
-    <>
-      <span className={styles['coworker-StepListTab-marker']} aria-hidden="true">
-        <span className={styles['coworker-StepListTab-icon']}>
-          <Icon size={16} strokeWidth={2} />
-        </span>
-        <span className={styles['coworker-StepListTab-check']}>
-          <Check size={16} strokeWidth={3} />
-        </span>
-      </span>
-      <span className={styles['coworker-StepListTab-labels']}>
-        <span className={styles['coworker-StepListTab-title']}>{item.title}</span>
-        <span className={styles['coworker-StepListTab-stage']}>{`Stage ${item.stage}`}</span>
-      </span>
-    </>
-  );
-}
-
-export const TabBasedStepList: StepListStory = {
-  render: (args: any) => (
-    <div className={styles['coworker-StepListTabs']}>
-      <StepListTabs {...args} defaultSelectedKey="governance">
-        <div className={styles['coworker-StepListTabList-wrapper']}>
-          <StepListTabList
-            aria-label="Coworker steps"
-            className={styles['coworker-StepListTabList']}>
-            {tabStepItems.map(item => (
-              <Step id={item.id}>
-                <TabStepContent item={item} />
-              </Step>
-            ))}
-          </StepListTabList>
-        </div>
-        <StepPanels>
-          {tabStepItems.map(item => (
-            <StepPanel id={item.id} className={styles['coworker-StepListTabPanel']}>
-              {`${item.title} — stage ${item.stage} content`}
-            </StepPanel>
-          ))}
-        </StepPanels>
-      </StepListTabs>
-    </div>
-  )
-};
-
-// Dynamic items variant. Upcoming steps aren't clickable, so forward navigation is driven
-// externally via the controlled selectedKey (Prev/Next), mirroring the other StepList stories.
-function InteractiveStepListTabs(args: any) {
-  const keys = useMemo(() => tabStepItems.map(o => o.id), []);
-  let [stepNumber, setStepNumber] = useState(
-    () => Math.max(keys.indexOf(args.defaultSelectedKey), 0) + 1
-  );
-  const selectedKey = keys[stepNumber - 1];
-
-  const handleSelectionChange = useCallback(
-    (key: string) => {
-      setStepNumber(keys.indexOf(key) + 1);
-      args.onSelectionChange?.(key);
-    },
-    [keys, args]
-  );
-
-  return (
-    <div className={styles['coworker-StepListTabs']}>
-      <StepListTabs {...args} selectedKey={selectedKey} onSelectionChange={handleSelectionChange}>
-        <div className={styles['coworker-StepListTabList-wrapper']}>
-          <StepListTabList
-            aria-label="Coworker steps"
-            items={tabStepItems}
-            className={styles['coworker-StepListTabList']}>
-            {(item: TabStepItem) => (
-              <Step id={item.id}>
-                <TabStepContent item={item} />
-              </Step>
-            )}
-          </StepListTabList>
-        </div>
-        <StepPanels items={tabStepItems}>
-          {(item: TabStepItem) => (
-            <StepPanel id={item.id} className={styles['coworker-StepListTabPanel']}>
-              {`${item.title} — stage ${item.stage} content`}
-            </StepPanel>
-          )}
-        </StepPanels>
-      </StepListTabs>
-      <div style={{display: 'flex', gap: '12px'}}>
-        <button onClick={() => setStepNumber(Math.max(stepNumber - 1, 1))}>Prev</button>
-        <button onClick={() => setStepNumber(Math.min(stepNumber + 1, keys.length))}>Next</button>
-      </div>
-    </div>
-  );
-}
-
-export const DynamicTabBasedStepList: StepListStory = {
-  render: (args: any) => <InteractiveStepListTabs {...args} defaultSelectedKey="plan" />
-};
-
-interface RouterStepItem extends TabStepItem {
-  url: string;
-}
-
-let routerStepItems: Array<RouterStepItem> = tabStepItems.map(item => ({
-  ...item,
-  url: `/${item.id}`
-}));
-
-function RouterStepListTabs(args: any) {
-  let [url, setUrl] = useState('/governance');
-  let currentIndex = routerStepItems.findIndex(item => item.url === url);
-  let prevUrl = routerStepItems[Math.max(currentIndex - 1, 0)].url;
-  let nextUrl = routerStepItems[Math.min(currentIndex + 1, routerStepItems.length - 1)].url;
-
-  return (
-    <RouterProvider navigate={setUrl}>
-      <div className={styles['coworker-StepListTabs']}>
-        <StepListTabs {...args} selectedKey={url}>
-          <div className={styles['coworker-StepListTabList-wrapper']}>
-            <StepListTabList
-              aria-label="Coworker steps"
-              items={routerStepItems}
-              className={styles['coworker-StepListTabList']}>
-              {(item: RouterStepItem) => (
-                <Step id={item.url} href={item.url}>
-                  <TabStepContent item={item} />
-                </Step>
-              )}
-            </StepListTabList>
-          </div>
-          <StepPanels items={routerStepItems}>
-            {(item: RouterStepItem) => (
-              <StepPanel id={item.url} className={styles['coworker-StepListTabPanel']}>
-                {`${item.title} — stage ${item.stage} content`}
-              </StepPanel>
-            )}
-          </StepPanels>
-        </StepListTabs>
-        <div style={{display: 'flex', gap: '12px'}}>
-          <Link href={prevUrl}>Prev</Link>
-          <Link href={nextUrl}>Next</Link>
-        </div>
-      </div>
-    </RouterProvider>
-  );
-}
-
-export const RouterTabBasedStepList: StepListStory = {
-  render: (args: any) => <RouterStepListTabs {...args} />
 };

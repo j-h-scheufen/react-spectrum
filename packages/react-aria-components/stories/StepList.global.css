@@ -1,0 +1,249 @@
+/*
+ * Styles for the StepList stories.
+ *
+ * This lives in a `*.global.css` file because `package.json` excludes those from the
+ * repo's CSS modules config, so plain class selectors survive the build and match the
+ * default `react-aria-*` class names the components render.
+ */
+
+.react-aria-StepList {
+  --steplist-notch: 16px;
+  --steplist-gap: 2px;
+
+  display: flex;
+  align-items: stretch;
+  box-sizing: border-box;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 16px;
+  background: #141414;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  counter-reset: count;
+
+  .react-aria-StepListItem {
+    position: relative;
+    display: flex;
+    flex: 1;
+    align-items: center;
+    gap: 10px;
+    box-sizing: border-box;
+    /* leave room on the right for the arrow point plus the notch overlap */
+    padding: 12px 16px 12px calc(16px + var(--steplist-notch));
+    margin-left: calc(var(--steplist-notch) * -1 + var(--steplist-gap));
+    color: #a1a1a1;
+    background: #1c1c1c;
+    cursor: pointer;
+    counter-increment: count;
+    /* arrow: notch cut into the left edge, point extending off the right */
+    clip-path: polygon(
+      0 0,
+      calc(100% - var(--steplist-notch)) 0,
+      100% 50%,
+      calc(100% - var(--steplist-notch)) 100%,
+      0 100%,
+      var(--steplist-notch) 50%
+    );
+
+    &:first-child {
+      margin-left: 0;
+      padding-left: 16px;
+      clip-path: polygon(
+        0 0,
+        calc(100% - var(--steplist-notch)) 0,
+        100% 50%,
+        calc(100% - var(--steplist-notch)) 100%,
+        0 100%
+      );
+    }
+
+    &:last-child {
+      padding-right: 16px;
+      clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%, var(--steplist-notch) 50%);
+    }
+
+    &[data-hovered] {
+      background: #242424;
+    }
+
+    &[data-current] {
+      color: #f5f5f5;
+      background: #3a3a3a;
+      cursor: default;
+    }
+
+    &[data-completed] {
+      color: #f5f5f5;
+    }
+
+    &[data-disabled] {
+      color: #5c5c5c;
+      cursor: default;
+    }
+
+    &[data-focus-visible] {
+      outline: 2px solid #4a8cff;
+      outline-offset: -3px;
+    }
+
+    /* default marker: the step number, swapped for a check once the step is completed */
+    &::before {
+      content: counter(count, decimal);
+      flex-shrink: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      box-sizing: border-box;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.08);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    &[data-current]::before {
+      color: #ffffff;
+      background: rgba(255, 255, 255, 0.14);
+    }
+
+    &[data-completed]::before {
+      content: '\2713';
+      color: #ffffff;
+      background: #12a150;
+    }
+  }
+
+  /* a Link child stretches over the whole chevron so it is all one click/focus target */
+  .react-aria-Link {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    color: inherit;
+    text-decoration: none;
+    outline: none;
+    cursor: inherit;
+
+    &::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+    }
+
+    &[data-focus-visible]::after {
+      outline: 2px solid #4a8cff;
+      outline-offset: -3px;
+    }
+  }
+
+  .react-aria-Text {
+    font-size: 13px;
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+/*
+ * The Coworker example builds on the shared appearance above: it replaces the number
+ * marker with a per-step icon and adds a stage sub-label under each title.
+ */
+.coworker-StepList {
+  /* the per-step icon below replaces the shared number/check marker */
+  .react-aria-StepListItem::before,
+  .react-aria-StepListItem[data-current]::before,
+  .react-aria-StepListItem[data-completed]::before {
+    content: none;
+    display: none;
+  }
+
+  .coworker-StepListItem-marker {
+    flex-shrink: 0;
+    display: inline-flex;
+  }
+
+  .coworker-StepListItem-icon,
+  .coworker-StepListItem-check {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    box-sizing: border-box;
+    border-radius: 50%;
+  }
+
+  .coworker-StepListItem-icon {
+    color: inherit;
+    background: rgba(255, 255, 255, 0.08);
+  }
+
+  [data-current] .coworker-StepListItem-icon {
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.14);
+  }
+
+  /* completed steps swap the icon for a green check */
+  .coworker-StepListItem-check {
+    display: none;
+    color: #ffffff;
+    background: #12a150;
+  }
+
+  [data-completed] .coworker-StepListItem-icon {
+    display: none;
+  }
+
+  [data-completed] .coworker-StepListItem-check {
+    display: inline-flex;
+  }
+
+  .coworker-StepListItem-labels {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    line-height: 1.2;
+  }
+
+  .coworker-StepListItem-title {
+    font-size: 13px;
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .coworker-StepListItem-stage {
+    font-size: 12px;
+    font-weight: 400;
+    color: #8a8a8a;
+    white-space: nowrap;
+  }
+}
+
+/* Route-driven content area for the Coworker StepList example. */
+.coworker-StepList-panel {
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: #141414;
+  color: #f5f5f5;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+.coworker-StepList-panel-title {
+  margin: 0 0 4px;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.coworker-StepList-panel-body {
+  margin: 0;
+  font-size: 13px;
+  color: #a1a1a1;
+}

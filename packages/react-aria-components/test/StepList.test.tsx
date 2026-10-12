@@ -115,17 +115,22 @@ describe('StepList', function () {
       onSelectionChange
     });
     const stepListItems = tree.getAllByRole('link');
+    const stepStates = ['Completed', 'Completed', 'Current', 'Not completed'];
 
-    // Each step link is labelled by its containing item, which includes the visually hidden
-    // step state text, so the state is part of the link's accessible name.
-    let currentStep = stepListItems[2];
-    expect(currentStep!.getAttribute('aria-current')).toBeTruthy();
+    // Each step link is labelled by a hidden element holding the step state text followed by
+    // the link itself, so the state is prepended to the link's accessible name without being
+    // announced again as part of the list item.
+    stepListItems.forEach((step, i) => {
+      let [stateId, selfId] = step.getAttribute('aria-labelledby')!.split(' ');
+      expect(selfId).toBe(step.id);
 
-    let completedStep = stepListItems[0];
-    expect(completedStep!.parentElement!.textContent).toContain('Completed');
+      let stepState = document.getElementById(stateId);
+      expect(stepState).toBe(step.previousElementSibling);
+      expect(stepState).toHaveAttribute('hidden');
+      expect(stepState).toHaveTextContent(stepStates[i]);
+    });
 
-    let notCompletedStep = stepListItems[3];
-    expect(notCompletedStep!.parentElement!.textContent).toContain('Not');
+    expect(stepListItems[2]).toHaveAttribute('aria-current', 'step');
   });
 
   it('attaches a user provided ref', function () {
@@ -200,6 +205,81 @@ describe('StepList', function () {
     await user.keyboard('{ArrowUp}');
     expect(getSteps()[1]).toHaveAttribute('aria-current');
     expect(onSelectionChange).not.toHaveBeenCalled();
+  });
+
+  it('does not capture keys that it has no navigation model for', async function () {
+    const tree = renderComponent({
+      defaultLastCompletedStep: 'step-two',
+      defaultSelectedKey: 'step-three'
+    });
+    const stepList = tree.getByLabelText('steplist-test');
+    const seen: Array<string> = [];
+    const onKeyDown = (e: KeyboardEvent) => seen.push(e.key);
+    document.addEventListener('keydown', onKeyDown);
+
+    try {
+      await user.tab();
+      const firstStep = within(stepList).getAllByRole('link')[0];
+      expect(document.activeElement).toBe(firstStep);
+
+      // Steps are reached with Tab, so these keys belong to the page rather than the step list.
+      await user.keyboard('{ArrowDown}{ArrowUp}{Escape}');
+      expect(document.activeElement).toBe(firstStep);
+      expect(seen).toEqual(['Tab', 'ArrowDown', 'ArrowUp', 'Escape']);
+    } finally {
+      document.removeEventListener('keydown', onKeyDown);
+    }
+  });
+
+  it('keeps focus on the activated step so tabbing continues from it', async function () {
+    const tree = renderWithRouter({
+      defaultLastCompletedStep: 'step-two',
+      defaultSelectedKey: 'step-three',
+      onSelectionChange
+    });
+    const stepList = tree.getByLabelText('steplist-test');
+    const getSteps = () => within(stepList).getAllByRole('link');
+
+    await user.tab();
+    expect(document.activeElement).toBe(getSteps()[0]);
+
+    // Becoming the current step must not change the rendered element type, otherwise the
+    // node is remounted and focus falls back to the body.
+    await user.keyboard('{Enter}');
+    expect(getSteps()[0]).toHaveAttribute('aria-current', 'step');
+    expect(document.activeElement).toBe(getSteps()[0]);
+
+    // A single tab moves to the next step rather than restarting from the document.
+    await user.tab();
+    expect(document.activeElement).toBe(getSteps()[1]);
+  });
+
+  it('allows user to select a completed step without an href via mouse and keyboard', async function () {
+    const tree = renderComponent({
+      defaultLastCompletedStep: 'step-two',
+      defaultSelectedKey: 'step-three',
+      onSelectionChange
+    });
+    const stepList = tree.getByLabelText('steplist-test');
+    const links = within(stepList).getAllByRole('link');
+
+    // None of the steps have an href, so the links render as spans.
+    expect(links[0].tagName).not.toBe('A');
+
+    await user.click(links[0]);
+    expect(onSelectionChange).toHaveBeenCalledTimes(1);
+    expect(onSelectionChange).toHaveBeenCalledWith('step-one');
+    expect(within(stepList).getAllByRole('listitem')[0]).toHaveAttribute('data-current', 'true');
+    onSelectionChange.mockReset();
+
+    // The newly selected step is current, so pressing it again is a no-op.
+    await user.keyboard('{Enter}');
+    expect(onSelectionChange).not.toHaveBeenCalled();
+
+    await user.tab();
+    await user.keyboard('{Enter}');
+    expect(onSelectionChange).toHaveBeenCalledTimes(1);
+    expect(onSelectionChange).toHaveBeenCalledWith('step-two');
   });
 
   it('should not allow user to click on disabled steps', async function () {

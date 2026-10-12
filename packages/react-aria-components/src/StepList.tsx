@@ -45,7 +45,6 @@ import {useFocusRing} from 'react-aria/useFocusRing';
 import {useHover} from 'react-aria/useHover';
 import {useLocalizedStringFormatter} from 'react-aria/useLocalizedStringFormatter';
 import {useObjectRef} from 'react-aria/useObjectRef';
-import {VisuallyHidden} from 'react-aria/VisuallyHidden';
 
 export interface StepListProps<T>
   extends
@@ -206,7 +205,11 @@ export const StepListItem = /*#__PURE__*/ createLeafComponent(
     let ref = useObjectRef<HTMLLIElement>(forwardedRef);
     let state = useContext(StepListStateContext)!;
     let stringFormatter = useLocalizedStringFormatter(intlMessages, 'react-aria-components');
-    let {stepProps, linkProps, ...states} = useStepListItem({key: node.key}, state, ref);
+    let {stepProps, stepStateProps, linkProps, ...states} = useStepListItem(
+      {key: node.key},
+      state,
+      ref
+    );
 
     let isCurrent = states.isSelected;
     let isCompleted = state.isCompleted(node.key);
@@ -241,9 +244,21 @@ export const StepListItem = /*#__PURE__*/ createLeafComponent(
       }
     });
 
+    // Keep the href while the step is current so the rendered element type stays stable.
+    // Dropping it would make RAC's Link switch from <a> to <span>, remounting the node and
+    // dropping focus. aria-current already marks the step as the current one.
+    let isSelectable = state.isSelectable(node.key);
+    let href = isSelectable ? props.href : undefined;
     let linkContextValue = {
       ...linkProps,
-      href: state.isSelectable(node.key) && !isCurrent ? props.href : undefined
+      href,
+      // useSelectableItem ignores presses that land on an interactive child, so the link is
+      // responsible for activating its own step. Without an href there is nothing to navigate
+      // to, so select the step directly instead.
+      onPress:
+        isSelectable && !isCurrent && href == null
+          ? () => state.setSelectedKey(node.key)
+          : undefined
     };
 
     let DOMProps = filterDOMProps(props as any, {global: true, labelable: true});
@@ -260,7 +275,7 @@ export const StepListItem = /*#__PURE__*/ createLeafComponent(
         data-focused={isFocused || undefined}
         data-focus-visible={isFocusVisible || undefined}
         data-pressed={states.isPressed || undefined}>
-        <VisuallyHidden elementType="span">{stepStateText}</VisuallyHidden>
+        <span {...stepStateProps}>{stepStateText}</span>
         <Provider values={[[LinkContext, linkContextValue]]}>{renderProps.children}</Provider>
       </dom.li>
     );

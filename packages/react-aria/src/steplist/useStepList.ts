@@ -39,9 +39,19 @@ export function useStepList<T>(
     ref
   });
 
+  // A step list is a list of links, so each step is reached with Tab rather than the arrow key
+  // navigation a selectable collection provides. The collection's keyboard handling is dropped
+  // because it can never move focus here (the list items themselves are not focusable), while it
+  // does stop arrow and escape keys from reaching the rest of the page.
+  const {
+    onKeyDown: _onKeyDown,
+    onKeyUp: _onKeyUp,
+    ...listPropsWithoutKeyboardNavigation
+  } = listProps;
+
   const strings = useLocalizedStringFormatter(intlMessages, '@react-aria/steplist');
   const stepListProps: HTMLAttributes<HTMLElement> = {
-    ...mergeProps(listProps, filterDOMProps(props, {labelable: true})),
+    ...mergeProps(listPropsWithoutKeyboardNavigation, filterDOMProps(props, {labelable: true})),
     'aria-label': ariaLabel || strings.format('steplist')
   };
 
