@@ -65,28 +65,6 @@ export default {
 
 export type StepListStory = StoryObj<typeof StepList>;
 
-export const StepListExample: StepListStory = {
-  render: (args: any) => (
-    <StepList {...args}>
-      <StepListItem>
-        <Link>
-          <Text>Home</Text>
-        </Link>
-      </StepListItem>
-      <StepListItem>
-        <Link>
-          <Text>React Aria</Text>
-        </Link>
-      </StepListItem>
-      <StepListItem>
-        <Link>
-          <Text>StepList</Text>
-        </Link>
-      </StepListItem>
-    </StepList>
-  )
-};
-
 interface ItemValue {
   id: string;
   url: string;
@@ -96,6 +74,51 @@ let items: Array<ItemValue> = [
   {id: 'React Aria', url: '/react-aria'},
   {id: 'StepList', url: '/react-aria/StepList'}
 ];
+
+// Translate the router's selected route into the id of the matching step so it can
+// drive the StepList's `selectedKey`.
+function routeToId<T extends ItemValue>(list: Array<T>, route: string): string {
+  return list.find(item => item.url === route)?.id ?? list[0].id;
+}
+
+// A stand-in for a client side router. RouterProvider lets every RAC Link in the tree
+// navigate through it, so the steps render as real anchors with an href.
+function Router(props: {
+  children: ({selectedRoute}: {selectedRoute: string}) => ReactNode;
+  defaultSelectedRoute: string;
+}) {
+  let [selectedRoute, setSelectedRoute] = useState<string>(props.defaultSelectedRoute);
+
+  return (
+    <RouterProvider navigate={setSelectedRoute}>{props.children({selectedRoute})}</RouterProvider>
+  );
+}
+
+export const StepListExample: StepListStory = {
+  render: (args: any) => (
+    <Router defaultSelectedRoute={items[0].url}>
+      {({selectedRoute}) => (
+        <StepList {...args} selectedKey={routeToId(items, selectedRoute)}>
+          <StepListItem id="Home" href="/">
+            <Link>
+              <Text>Home</Text>
+            </Link>
+          </StepListItem>
+          <StepListItem id="React Aria" href="/react-aria">
+            <Link>
+              <Text>React Aria</Text>
+            </Link>
+          </StepListItem>
+          <StepListItem id="StepList" href="/react-aria/StepList">
+            <Link>
+              <Text>StepList</Text>
+            </Link>
+          </StepListItem>
+        </StepList>
+      )}
+    </Router>
+  )
+};
 
 function InteractiveStepList(args: any) {
   const keys = useMemo(() => (args.items || []).map(o => o.id), [args.items]);
@@ -114,14 +137,22 @@ function InteractiveStepList(args: any) {
     },
     [keys, args]
   );
+
+  const navigate = useCallback(
+    (href: string) => handleSelectionChange(routeToId(args.items, href)),
+    [args.items, handleSelectionChange]
+  );
+
   return (
-    <div style={{display: 'flex', flexDirection: 'column', gap: '8px'}}>
-      <StepList {...args} onSelectionChange={handleSelectionChange} selectedKey={selectedKey} />
-      <div>
-        <button onClick={() => setStepNumber(Math.max(stepNumber - 1, 1))}>Prev</button>
-        <button onClick={() => setStepNumber(Math.min(stepNumber + 1, keys.length))}>Next</button>
+    <RouterProvider navigate={navigate}>
+      <div style={{display: 'flex', flexDirection: 'column', gap: '8px'}}>
+        <StepList {...args} onSelectionChange={handleSelectionChange} selectedKey={selectedKey} />
+        <div>
+          <button onClick={() => setStepNumber(Math.max(stepNumber - 1, 1))}>Prev</button>
+          <button onClick={() => setStepNumber(Math.min(stepNumber + 1, keys.length))}>Next</button>
+        </div>
       </div>
-    </div>
+    </RouterProvider>
   );
 }
 
@@ -129,7 +160,7 @@ export const DynamicStepListExample: StepListStory = {
   render: (args: any) => (
     <InteractiveStepList {...args} items={items}>
       {(item: ItemValue) => (
-        <StepListItem id={item.id}>
+        <StepListItem id={item.id} href={item.url}>
           <Link>
             <Text>{item.id}</Text>
           </Link>
@@ -161,25 +192,6 @@ let coworkerItems: Array<CoworkerItemValue> = [
   {id: 'monitor', url: '/monitor', title: 'Monitor', stage: 5, Icon: Rocket}
 ];
 
-// Translate the router's selected route into the id of the matching step so it can
-// drive the StepList's `selectedKey`.
-function routeToId(route: string): string {
-  return coworkerItems.find(item => item.url === route)?.id ?? coworkerItems[0].id;
-}
-
-// A stand-in for a client side router. RouterProvider lets every RAC Link in the tree
-// navigate through it, so the links render as real anchors with an href.
-function Router(props: {
-  children: ({selectedRoute}: {selectedRoute: string}) => ReactNode;
-  defaultSelectedRoute: string;
-}) {
-  let [selectedRoute, setSelectedRoute] = useState<string>(props.defaultSelectedRoute);
-
-  return (
-    <RouterProvider navigate={setSelectedRoute}>{props.children({selectedRoute})}</RouterProvider>
-  );
-}
-
 export const CoworkerStepListExample: StepListStory = {
   render: (args: any) => (
     <Router defaultSelectedRoute="/governance">
@@ -193,7 +205,7 @@ export const CoworkerStepListExample: StepListStory = {
             <StepList
               {...args}
               items={coworkerItems}
-              selectedKey={routeToId(selectedRoute)}
+              selectedKey={routeToId(coworkerItems, selectedRoute)}
               className="react-aria-StepList coworker-StepList">
               {(item: CoworkerItemValue) => {
                 let Icon = item.Icon;
